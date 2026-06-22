@@ -1,5 +1,6 @@
 import { eventBus } from '../shared/event-bus.js';
 import { startAspelWatcher } from './aspel/aspel-watcher.js';
+import { writeNewProductToAspel } from './aspel/aspel-writer.js';
 import { LiveComerceWSClient } from '../websocket/ws-client.js';
 import { QueueManager } from '../queue/queue-manager.js';
 import { IdentityManager } from './identity/identity-manager.js';
@@ -55,13 +56,12 @@ export class SyncManager {
     });
 
     eventBus.on('sync:periodic', () => {
-      const pending = this.queueManager.getPendingCount();
-      this.wsClient.send({
-        type: 'SYNC_STATUS',
-        pending,
-        lastSync: Date.now(),
-        status: pending === 0 ? 'SYNCED' : 'PENDING'
-      });
+      eventBus.emit('agent:send:message', this.queueManager.buildSyncStatus());
+    });
+
+    eventBus.on('aspel:write:product', (product) => {
+      const { importPath, ...productData } = product;
+      writeNewProductToAspel(productData, importPath);
     });
 
     eventBus.on('ws:connected', () => {

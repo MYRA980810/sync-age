@@ -1,5 +1,4 @@
 import { generateSku } from './sku-generator.js';
-import { writeNewProductToAspel } from '../aspel/aspel-writer.js';
 import { eventBus } from '../../shared/event-bus.js';
 import { logger } from '../../shared/logger.js';
 
@@ -34,14 +33,15 @@ export class IdentityManager {
          VALUES (?, ?, 'LIVE_NEW', ?)`
       ).run(sku, uuid, Date.now());
 
-      await writeNewProductToAspel({
+      eventBus.emit('aspel:write:product', {
         sku,
         name,
         stock,
         price,
         category,
-        concepto: 'Creado desde LiveComerce Live'
-      }, this.aspelConfig.importPath);
+        concepto: 'Creado desde LiveComerce Live',
+        importPath: this.aspelConfig.importPath
+      });
 
       eventBus.emit('agent:send:message', {
         type: 'PRODUCT_CREATED',

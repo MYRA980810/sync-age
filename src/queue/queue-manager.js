@@ -133,6 +133,16 @@ export class QueueManager {
     ).get('PENDING').count;
   }
 
+  buildSyncStatus() {
+    const pending = this.getPendingCount();
+    return {
+      type: 'SYNC_STATUS',
+      pending,
+      lastSync: Date.now(),
+      status: pending === 0 ? 'SYNCED' : 'PENDING'
+    };
+  }
+
   markDone(id) {
     this.db.prepare(
       'UPDATE sync_queue SET status = ?, processed_at = ? WHERE id = ?'

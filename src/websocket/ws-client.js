@@ -31,8 +31,12 @@ export class LiveComerceWSClient {
     });
 
     this.ws.on('message', (data) => {
-      const msg = JSON.parse(data);
-      this.routeMessage(msg);
+      try {
+        const msg = JSON.parse(data);
+        this.routeMessage(msg);
+      } catch (err) {
+        logger.error('Mensaje WebSocket malformado', { err: err.message });
+      }
     });
 
     this.ws.on('close', () => {
