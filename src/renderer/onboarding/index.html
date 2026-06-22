@@ -213,6 +213,21 @@
     <button class="btn" id="btn-start">EMPEZAR</button>
   </div>
 
+  <!-- Screen 1.5: Login LiveComerce -->
+  <div class="screen" id="screen-login">
+    <div class="logo" style="font-size: 32px; margin-bottom: 24px;">LC</div>
+    <h2>Ingresa tu cuenta de LiveComerce</h2>
+    <p>Usa el correo y contraseña de tu cuenta de LiveComerce para vincular este dispositivo.</p>
+    <div style="width: 100%; max-width: 300px;">
+      <input type="email" id="input-email" placeholder="Correo electrónico"
+        style="width: 100%; padding: 14px 16px; font-size: 15px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; margin-bottom: 12px; outline: none;">
+      <input type="password" id="input-password" placeholder="Contraseña"
+        style="width: 100%; padding: 14px 16px; font-size: 15px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; margin-bottom: 8px; outline: none;">
+      <p id="login-error" style="color: #ff3366; font-size: 13px; margin-bottom: 16px; display: none;"></p>
+    </div>
+    <button class="btn" id="btn-login">CONECTAR</button>
+  </div>
+
   <!-- Screen 2: Detección POS -->
   <div class="screen" id="screen-pos">
     <h2>¿Usas alguno de estos sistemas en tu tienda?</h2>
@@ -265,6 +280,7 @@
     <div class="step-dot" data-step="1"></div>
     <div class="step-dot" data-step="2"></div>
     <div class="step-dot" data-step="3"></div>
+    <div class="step-dot" data-step="4"></div>
   </div>
 
   <script src="onboarding.js"></script>

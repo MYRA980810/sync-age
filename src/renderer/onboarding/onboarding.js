@@ -1,7 +1,8 @@
 let currentScreen = 0;
 let selectedPos = null;
+let authData = null;
 
-const screens = ['screen-welcome', 'screen-pos', 'screen-confirm', 'screen-done'];
+const screens = ['screen-welcome', 'screen-login', 'screen-pos', 'screen-confirm', 'screen-done'];
 
 function showScreen(index) {
   screens.forEach((id, i) => {
@@ -20,6 +21,42 @@ document.getElementById('btn-start').addEventListener('click', () => {
   showScreen(1);
 });
 
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('input-email').value.trim();
+  const password = document.getElementById('input-password').value;
+  const errorEl = document.getElementById('login-error');
+  const btnLogin = document.getElementById('btn-login');
+
+  errorEl.style.display = 'none';
+
+  if (!email || !password) {
+    errorEl.textContent = 'Ingresa tu correo y contraseña.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  btnLogin.textContent = 'CONECTANDO...';
+  btnLogin.disabled = true;
+
+  try {
+    const result = await window.syncAgent.authenticateAgent(email, password);
+
+    if (result.success) {
+      authData = result;
+      showScreen(2);
+    } else {
+      errorEl.textContent = result.error || 'Correo o contraseña incorrectos';
+      errorEl.style.display = 'block';
+    }
+  } catch (err) {
+    errorEl.textContent = 'Error de conexión. Verifica tu internet.';
+    errorEl.style.display = 'block';
+  } finally {
+    btnLogin.textContent = 'CONECTAR';
+    btnLogin.disabled = false;
+  }
+});
+
 document.querySelectorAll('.pos-option').forEach(option => {
   option.addEventListener('click', () => {
     document.querySelectorAll('.pos-option').forEach(o => o.classList.remove('selected'));
@@ -27,7 +64,7 @@ document.querySelectorAll('.pos-option').forEach(option => {
     selectedPos = option.dataset.pos;
 
     setTimeout(() => {
-      showScreen(2);
+      showScreen(3);
       startDetection(selectedPos);
     }, 300);
   });
@@ -65,7 +102,7 @@ async function startDetection(posType) {
 
           if (progress >= 100) {
             clearInterval(interval);
-            setTimeout(() => showScreen(3), 500);
+            setTimeout(() => showScreen(4), 500);
           }
         }, 200);
       });
@@ -90,7 +127,7 @@ async function startDetection(posType) {
     btnSync.style.display = 'block';
 
     btnSync.addEventListener('click', () => {
-      setTimeout(() => showScreen(3), 1000);
+      setTimeout(() => showScreen(4), 1000);
     });
   }
 }
