@@ -1,8 +1,7 @@
-import { detectAspelInstallation } from '../../main/windows-registry.js';
 import { logger } from '../../shared/logger.js';
 
-export async function detectAspel() {
-  const result = await detectAspelInstallation();
+export async function detectAspel(detectFn) {
+  const result = await detectFn();
 
   if (result.found) {
     logger.info('Aspel SAE detectado', {

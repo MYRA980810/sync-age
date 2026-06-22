@@ -1,16 +1,16 @@
 import WebSocket from 'ws';
+import { ReconnectManager } from './reconnect-manager.js';
 import { eventBus } from '../shared/event-bus.js';
 import { logger } from '../shared/logger.js';
 
 const WS_URL = 'wss://api.livecomerce.mx/ws/agent';
-const MAX_RECONNECT_DELAY = 30_000;
 
 export class LiveComerceWSClient {
   constructor(sellerId, token) {
     this.sellerId = sellerId;
     this.token = token;
-    this.reconnectDelay = 1000;
     this.ws = null;
+    this.reconnectManager = new ReconnectManager();
   }
 
   connect() {
@@ -21,7 +21,7 @@ export class LiveComerceWSClient {
     });
 
     this.ws.on('open', () => {
-      this.reconnectDelay = 1000;
+      this.reconnectManager.reset();
       this.send({
         type: 'AGENT_CONNECT',
         sellerId: this.sellerId
@@ -36,11 +36,7 @@ export class LiveComerceWSClient {
     });
 
     this.ws.on('close', () => {
-      const jitter = Math.random() * 1000;
-      const delay = Math.min(this.reconnectDelay * 2, MAX_RECONNECT_DELAY) + jitter;
-      this.reconnectDelay = delay;
-      logger.info(`Reconectando en ${Math.round(delay / 1000)}s...`);
-      setTimeout(() => this.connect(), delay);
+      this.reconnectManager.scheduleReconnect(() => this.connect());
     });
 
     this.ws.on('error', (err) => {
@@ -55,6 +51,9 @@ export class LiveComerceWSClient {
         break;
       case 'STOCK_REQUEST':
         eventBus.emit('server:stock:request', msg);
+        break;
+      case 'STOCK_RESPONSE':
+        eventBus.emit('server:stock:response', msg);
         break;
       case 'CONFIG_UPDATE':
         eventBus.emit('server:config:update', msg);
@@ -83,7 +82,7 @@ export class LiveComerceWSClient {
       const timeout = setTimeout(() => resolve(0), 5000);
 
       const handler = (msg) => {
-        if (msg.type === 'STOCK_RESPONSE' && msg.sku === sku) {
+        if (msg.sku === sku) {
           clearTimeout(timeout);
           eventBus.off('server:stock:response', handler);
           resolve(msg.stock);

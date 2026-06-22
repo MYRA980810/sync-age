@@ -4,9 +4,8 @@ import { eventBus } from '../../shared/event-bus.js';
 import { logger } from '../../shared/logger.js';
 
 export class IdentityManager {
-  constructor(db, wsClient, aspelConfig) {
+  constructor(db, aspelConfig) {
     this.db = db;
-    this.wsClient = wsClient;
     this.aspelConfig = aspelConfig;
     this.registerHandlers();
   }
@@ -44,7 +43,7 @@ export class IdentityManager {
         concepto: 'Creado desde LiveComerce Live'
       }, this.aspelConfig.importPath);
 
-      this.wsClient.send({
+      eventBus.emit('agent:send:message', {
         type: 'PRODUCT_CREATED',
         uuid,
         sku,

@@ -41,7 +41,7 @@ export class QueueManager {
   recoverStuckItems() {
     const cutoff = Date.now() - PROCESSING_TIMEOUT;
     const result = this.db.prepare(
-      'UPDATE sync_queue SET status = ? WHERE status = ? AND created_at < ?'
+      'UPDATE sync_queue SET status = ? WHERE status = ? AND processing_at < ?'
     ).run('PENDING', 'PROCESSING', cutoff);
 
     if (result.changes > 0) {
@@ -58,8 +58,8 @@ export class QueueManager {
 
     for (const item of pending) {
       this.db.prepare(
-        'UPDATE sync_queue SET status = ? WHERE id = ?'
-      ).run('PROCESSING', item.id);
+        'UPDATE sync_queue SET status = ?, processing_at = ? WHERE id = ?'
+      ).run('PROCESSING', Date.now(), item.id);
     }
 
     eventBus.emit('queue:items:ready', pending);

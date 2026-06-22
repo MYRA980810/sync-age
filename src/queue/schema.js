@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS sync_queue (
   attempts INTEGER DEFAULT 0,
   created_at INTEGER NOT NULL,
   processed_at INTEGER,
+  processing_at INTEGER,
   error_message TEXT
 );
 

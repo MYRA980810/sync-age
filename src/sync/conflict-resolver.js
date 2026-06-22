@@ -1,3 +1,4 @@
+import { eventBus } from '../shared/event-bus.js';
 import { logger } from '../shared/logger.js';
 
 export function resolveStockConflict(aspelStock, livecomerceStock) {
@@ -11,7 +12,7 @@ export function resolveStockConflict(aspelStock, livecomerceStock) {
   return resolved;
 }
 
-export async function reconcileOfflineChanges(db, wsClient) {
+export async function reconcileOfflineChanges(db) {
   const pendingChanges = db.prepare(
     'SELECT * FROM sync_queue WHERE status = ? ORDER BY created_at ASC'
   ).all('PENDING');
@@ -20,15 +21,15 @@ export async function reconcileOfflineChanges(db, wsClient) {
     const payload = JSON.parse(change.payload);
 
     if (change.entity_type === 'STOCK' && change.direction === 'TO_SERVER') {
-      const serverStock = await wsClient.getStock(change.entity_id);
-      payload.stock = resolveStockConflict(payload.stock, serverStock);
+      payload.needsConflictResolution = true;
     }
 
-    await wsClient.send({
+    eventBus.emit('agent:send:message', {
       type: change.entity_type,
       ...payload
     });
 
-    db.prepare('UPDATE sync_queue SET status = ? WHERE id = ?').run('DONE', change.id);
+    db.prepare('UPDATE sync_queue SET status = ?, processed_at = ? WHERE id = ?')
+      .run('DONE', Date.now(), change.id);
   }
 }
