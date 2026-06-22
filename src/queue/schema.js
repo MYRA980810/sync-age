@@ -1,3 +1,5 @@
+import Database from 'better-sqlite3';
+
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS sync_queue (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,8 +63,15 @@ INSERT OR IGNORE INTO sku_sequence (category, last_seq) VALUES
   ('GEN', 0);
 `;
 
-export const PRAGMAS = [
-  'PRAGMA journal_mode = WAL;',
-  'PRAGMA foreign_keys = ON;',
-  'PRAGMA synchronous = NORMAL;'
-];
+export function initDatabase(dbPath) {
+  const db = new Database(dbPath);
+
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('cache_size = -10000');
+
+  db.exec(SCHEMA_SQL);
+
+  return db;
+}

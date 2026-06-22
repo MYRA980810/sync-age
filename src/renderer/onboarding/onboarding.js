@@ -39,7 +39,7 @@ document.getElementById('btn-login').addEventListener('click', async () => {
   btnLogin.disabled = true;
 
   try {
-    const result = await window.syncAgent.authenticateAgent(email, password);
+    const result = await window.livecomerceAgent.login(email, password);
 
     if (result.success) {
       authData = result;
@@ -82,7 +82,7 @@ async function startDetection(posType) {
     title.textContent = 'Buscando Aspel SAE...';
     text.textContent = 'Detectando tu sistema de punto de venta.';
 
-    const result = await window.syncAgent.detectAspel();
+    const result = await window.livecomerceAgent.detectPOS();
 
     if (result.found) {
       icon.textContent = '✅';
@@ -132,7 +132,6 @@ async function startDetection(posType) {
   }
 }
 
-document.getElementById('btn-done').addEventListener('click', async () => {
-  await window.syncAgent.completeOnboarding({ posType: selectedPos });
+document.getElementById('btn-done').addEventListener('click', () => {
   window.close();
 });

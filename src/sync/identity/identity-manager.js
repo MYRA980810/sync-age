@@ -1,5 +1,6 @@
 import { generateSku } from './sku-generator.js';
 import { writeNewProductToAspel } from '../aspel/aspel-writer.js';
+import { eventBus } from '../../shared/event-bus.js';
 import { logger } from '../../shared/logger.js';
 
 export class IdentityManager {
@@ -11,7 +12,7 @@ export class IdentityManager {
   }
 
   registerHandlers() {
-    this.wsClient.on('NEW_PRODUCT', (msg) => this.handleNewProduct(msg));
+    eventBus.on('server:new:product', (msg) => this.handleNewProduct(msg));
   }
 
   async handleNewProduct(msg) {

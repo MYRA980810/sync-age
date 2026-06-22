@@ -1,4 +1,5 @@
 import WebSocket from 'ws';
+import { eventBus } from '../shared/event-bus.js';
 import { logger } from '../shared/logger.js';
 
 const WS_URL = 'wss://api.livecomerce.mx/ws/agent';
@@ -10,7 +11,6 @@ export class LiveComerceWSClient {
     this.token = token;
     this.reconnectDelay = 1000;
     this.ws = null;
-    this.messageHandlers = new Map();
   }
 
   connect() {
@@ -27,15 +27,12 @@ export class LiveComerceWSClient {
         sellerId: this.sellerId
       });
       logger.info('WebSocket conectado');
-
-      const handler = this.messageHandlers.get('open');
-      if (handler) handler();
+      eventBus.emit('ws:connected');
     });
 
     this.ws.on('message', (data) => {
       const msg = JSON.parse(data);
-      const handler = this.messageHandlers.get(msg.type);
-      if (handler) handler(msg);
+      this.routeMessage(msg);
     });
 
     this.ws.on('close', () => {
@@ -51,6 +48,28 @@ export class LiveComerceWSClient {
     });
   }
 
+  routeMessage(msg) {
+    switch (msg.type) {
+      case 'ONLINE_SALE':
+        eventBus.emit('server:online:sale', msg);
+        break;
+      case 'STOCK_REQUEST':
+        eventBus.emit('server:stock:request', msg);
+        break;
+      case 'CONFIG_UPDATE':
+        eventBus.emit('server:config:update', msg);
+        break;
+      case 'NEW_PRODUCT':
+        eventBus.emit('server:new:product', msg);
+        break;
+      case 'DELETE_PRODUCT':
+        eventBus.emit('server:delete:product', msg);
+        break;
+      default:
+        logger.warn('Mensaje WebSocket no manejado', { type: msg.type });
+    }
+  }
+
   send(message) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
@@ -63,20 +82,16 @@ export class LiveComerceWSClient {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => resolve(0), 5000);
 
-      const originalHandler = this.messageHandlers.get('STOCK_RESPONSE');
-      this.messageHandlers.set('STOCK_RESPONSE', (msg) => {
-        if (msg.sku === sku) {
+      const handler = (msg) => {
+        if (msg.type === 'STOCK_RESPONSE' && msg.sku === sku) {
           clearTimeout(timeout);
-          if (originalHandler) this.messageHandlers.set('STOCK_RESPONSE', originalHandler);
+          eventBus.off('server:stock:response', handler);
           resolve(msg.stock);
         }
-      });
+      };
 
+      eventBus.on('server:stock:response', handler);
       this.send({ type: 'STOCK_REQUEST', sku });
     });
-  }
-
-  on(messageType, handler) {
-    this.messageHandlers.set(messageType, handler);
   }
 }

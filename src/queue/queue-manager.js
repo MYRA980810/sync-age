@@ -1,33 +1,75 @@
-import Database from 'better-sqlite3';
 import { join } from 'path';
 import { app } from 'electron';
-import { SCHEMA_SQL, PRAGMAS } from './schema.js';
+import { initDatabase } from './schema.js';
+import { eventBus } from '../shared/event-bus.js';
 import { logger } from '../shared/logger.js';
+
+const PROCESSING_TIMEOUT = 60_000;
+const MAX_ATTEMPTS = 5;
+const PROCESS_INTERVAL = 5_000;
+const BATCH_SIZE = 50;
 
 export class QueueManager {
   constructor() {
     this.db = null;
+    this.processingTimer = null;
   }
 
   initialize() {
     const dbPath = join(app.getPath('userData'), 'queue.db');
-    this.db = new Database(dbPath);
-
-    for (const pragma of PRAGMAS) {
-      this.db.pragma(pragma.replace('PRAGMA ', '').replace(';', ''));
-    }
-
-    this.db.exec(SCHEMA_SQL);
+    this.db = initDatabase(dbPath);
     logger.info('SQLite queue inicializada', { dbPath });
   }
 
+  startProcessingLoop() {
+    this.recoverStuckItems();
+
+    this.processingTimer = setInterval(() => {
+      this.processQueue();
+    }, PROCESS_INTERVAL);
+
+    logger.info('Outbox processing loop iniciado', { intervalMs: PROCESS_INTERVAL });
+  }
+
+  stopProcessingLoop() {
+    if (this.processingTimer) {
+      clearInterval(this.processingTimer);
+      this.processingTimer = null;
+    }
+  }
+
+  recoverStuckItems() {
+    const cutoff = Date.now() - PROCESSING_TIMEOUT;
+    const result = this.db.prepare(
+      'UPDATE sync_queue SET status = ? WHERE status = ? AND created_at < ?'
+    ).run('PENDING', 'PROCESSING', cutoff);
+
+    if (result.changes > 0) {
+      logger.warn('Items stuck en PROCESSING recuperados', { count: result.changes });
+    }
+  }
+
+  processQueue() {
+    const pending = this.db.prepare(
+      'SELECT * FROM sync_queue WHERE status = ? ORDER BY created_at ASC LIMIT ?'
+    ).all('PENDING', BATCH_SIZE);
+
+    if (pending.length === 0) return;
+
+    for (const item of pending) {
+      this.db.prepare(
+        'UPDATE sync_queue SET status = ? WHERE id = ?'
+      ).run('PROCESSING', item.id);
+    }
+
+    eventBus.emit('queue:items:ready', pending);
+  }
+
   enqueue(item) {
-    const stmt = this.db.prepare(`
+    this.db.prepare(`
       INSERT INTO sync_queue (direction, entity_type, entity_id, payload, created_at)
       VALUES (?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
+    `).run(
       item.direction,
       item.entity_type || 'STOCK',
       item.entity_id || item.sku,
@@ -98,12 +140,21 @@ export class QueueManager {
   }
 
   markFailed(id, errorMessage) {
+    const item = this.db.prepare('SELECT attempts FROM sync_queue WHERE id = ?').get(id);
+    const newAttempts = (item?.attempts || 0) + 1;
+    const newStatus = newAttempts >= MAX_ATTEMPTS ? 'FAILED' : 'PENDING';
+
     this.db.prepare(
-      'UPDATE sync_queue SET status = ?, attempts = attempts + 1, error_message = ? WHERE id = ?'
-    ).run('FAILED', errorMessage, id);
+      'UPDATE sync_queue SET status = ?, attempts = ?, error_message = ? WHERE id = ?'
+    ).run(newStatus, newAttempts, errorMessage, id);
+
+    if (newStatus === 'FAILED') {
+      logger.error('Item marcado como FAILED después de máximos intentos', { id, attempts: newAttempts });
+    }
   }
 
   close() {
+    this.stopProcessingLoop();
     if (this.db) this.db.close();
   }
 }

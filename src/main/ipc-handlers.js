@@ -6,13 +6,13 @@ import { logger } from '../shared/logger.js';
 const AUTH_URL = 'https://api.livecomerce.mx/api/agent/auth';
 
 export function registerIpcHandlers(mainWindow, db) {
-  ipcMain.handle('detect-aspel', async () => {
+  ipcMain.handle('agent:detectPOS', async () => {
     const result = await detectAspelInstallation();
-    logger.info('Detección Aspel solicitada desde renderer', result);
+    logger.info('Detección POS solicitada desde renderer', result);
     return result;
   });
 
-  ipcMain.handle('get-sync-status', async () => {
+  ipcMain.handle('agent:getStatus', async () => {
     return {
       status: 'connected',
       pending: 0,
@@ -20,7 +20,7 @@ export function registerIpcHandlers(mainWindow, db) {
     };
   });
 
-  ipcMain.handle('authenticate-agent', async (event, email, password) => {
+  ipcMain.handle('agent:login', async (event, { email, password }) => {
     try {
       const deviceId = getOrCreateDeviceId(db);
 
@@ -62,15 +62,5 @@ export function registerIpcHandlers(mainWindow, db) {
       logger.error('Error en autenticación', { error: error.message });
       return { success: false, error: 'Error de conexión' };
     }
-  });
-
-  ipcMain.handle('start-onboarding', async (event, posType) => {
-    logger.info('Onboarding iniciado', { posType });
-    return { success: true, posType };
-  });
-
-  ipcMain.handle('complete-onboarding', async (event, config) => {
-    logger.info('Onboarding completado', config);
-    return { success: true };
   });
 }

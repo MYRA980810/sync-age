@@ -1,9 +1,7 @@
 import { watch } from 'chokidar';
 import { parseAspelExport } from './aspel-parser.js';
-import { QueueManager } from '../../queue/queue-manager.js';
+import { eventBus } from '../../shared/event-bus.js';
 import { logger } from '../../shared/logger.js';
-
-const queueManager = new QueueManager();
 
 export function startAspelWatcher(exportPath) {
   const watcher = watch(exportPath, {
@@ -26,7 +24,7 @@ export function startAspelWatcher(exportPath) {
 async function handleFileChange(filePath) {
   logger.info('Archivo Aspel detectado', { filePath });
   const products = await parseAspelExport(filePath);
-  await queueManager.enqueueAspelChanges(products);
+  eventBus.emit('aspel:inventory:changed', products);
 }
 
 function isAspelInventoryFile(path) {
