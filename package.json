@@ -1,0 +1,32 @@
+{
+  "name": "livecomerce-sync-agent",
+  "version": "1.0.0",
+  "description": "Agente de sincronización LiveComerce",
+  "main": "src/main/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "build:installer": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.0.0",
+    "chokidar": "^5.0.0",
+    "electron-updater": "^6.0.0",
+    "iconv-lite": "^0.6.3",
+    "node-schedule": "^2.1.0",
+    "papaparse": "^5.4.0",
+    "winreg": "^1.2.4",
+    "winston": "^3.14.0",
+    "ws": "^8.18.0",
+    "xlsx": "^0.18.5",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

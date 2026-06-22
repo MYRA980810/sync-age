@@ -1,0 +1,25 @@
+appId: mx.livecomerce.syncagent
+productName: LiveComerce Sync Agent
+copyright: Copyright 2026 LiveComerce
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+  runAfterFinish: true
+
+publish:
+  provider: github
+  owner: MYRA980810
+  repo: livecomerce-sync-agent
+
+extraResources:
+  - from: build/autostart.reg
+    to: autostart.reg

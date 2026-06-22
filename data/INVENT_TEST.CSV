@@ -1,0 +1,9 @@
+CLAVE,DESCRIPCION,EXISTENCIA,PRECIO1,LINEA,ACTIVO
+BLS-001,Blusa floral talla S,10,350.00,ROPA,1
+BLS-002,Blusa floral talla M,5,350.00,ROPA,1
+BLS-003,Blusa floral talla L,0,350.00,ROPA,1
+COS-001,Labial rojo mate,25,120.00,COSMETICOS,1
+COS-002,Sombras nude paleta,8,280.00,COSMETICOS,1
+ACC-001,Bolsa de mano café,3,650.00,ACCESORIOS,1
+ACC-002,Aretes dorados,50,85.00,ACCESORIOS,1
+DRAFT-001,Producto sin activar,100,200.00,ROPA,0
