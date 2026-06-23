@@ -69,6 +69,13 @@ export class SyncManager {
       this.queueManager.recoverStuckItems();
     });
 
+    eventBus.on('sync:force', () => {
+      logger.info('Sincronización forzada solicitada');
+      this.queueManager.recoverStuckItems();
+      this.queueManager.processQueue();
+      eventBus.emit('sync:periodic');
+    });
+
     this.wsClient.connect();
 
     if (config.aspel?.exportPath) {

@@ -1,9 +1,9 @@
 import WebSocket from 'ws';
 import { ReconnectManager } from './reconnect-manager.js';
+import { MessageTypes } from './ws-protocol.js';
 import { eventBus } from '../shared/event-bus.js';
 import { logger } from '../shared/logger.js';
-
-const WS_URL = 'wss://api.livecomerce.mx/ws/agent';
+import { WS_URL } from '../shared/constants.js';
 
 export class LiveComerceWSClient {
   constructor(sellerId, token) {
@@ -23,7 +23,7 @@ export class LiveComerceWSClient {
     this.ws.on('open', () => {
       this.reconnectManager.reset();
       this.send({
-        type: 'AGENT_CONNECT',
+        type: MessageTypes.AGENT_CONNECT,
         sellerId: this.sellerId
       });
       logger.info('WebSocket conectado');
@@ -40,6 +40,7 @@ export class LiveComerceWSClient {
     });
 
     this.ws.on('close', () => {
+      eventBus.emit('ws:disconnected');
       this.reconnectManager.scheduleReconnect(() => this.connect());
     });
 
@@ -50,22 +51,22 @@ export class LiveComerceWSClient {
 
   routeMessage(msg) {
     switch (msg.type) {
-      case 'ONLINE_SALE':
+      case MessageTypes.ONLINE_SALE:
         eventBus.emit('server:online:sale', msg);
         break;
-      case 'STOCK_REQUEST':
+      case MessageTypes.STOCK_REQUEST:
         eventBus.emit('server:stock:request', msg);
         break;
-      case 'STOCK_RESPONSE':
+      case MessageTypes.STOCK_RESPONSE:
         eventBus.emit('server:stock:response', msg);
         break;
-      case 'CONFIG_UPDATE':
+      case MessageTypes.CONFIG_UPDATE:
         eventBus.emit('server:config:update', msg);
         break;
-      case 'NEW_PRODUCT':
+      case MessageTypes.NEW_PRODUCT:
         eventBus.emit('server:new:product', msg);
         break;
-      case 'DELETE_PRODUCT':
+      case MessageTypes.DELETE_PRODUCT:
         eventBus.emit('server:delete:product', msg);
         break;
       default:
@@ -94,7 +95,7 @@ export class LiveComerceWSClient {
       };
 
       eventBus.on('server:stock:response', handler);
-      this.send({ type: 'STOCK_REQUEST', sku });
+      this.send({ type: MessageTypes.STOCK_REQUEST, sku });
     });
   }
 }

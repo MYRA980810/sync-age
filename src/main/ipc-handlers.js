@@ -1,11 +1,12 @@
 import { ipcMain } from 'electron';
 import { detectAspelInstallation } from './windows-registry.js';
 import { saveAgentToken, getOrCreateDeviceId } from '../shared/crypto.js';
+import { eventBus } from '../shared/event-bus.js';
 import { logger } from '../shared/logger.js';
 
 const AUTH_URL = 'https://api.livecomerce.mx/api/agent/auth';
 
-export function registerIpcHandlers(mainWindow, db) {
+export function registerIpcHandlers(mainWindow, db, syncState) {
   ipcMain.handle('agent:detectPOS', async () => {
     const result = await detectAspelInstallation();
     logger.info('Detección POS solicitada desde renderer', result);
@@ -13,10 +14,14 @@ export function registerIpcHandlers(mainWindow, db) {
   });
 
   ipcMain.handle('agent:getStatus', async () => {
+    const pending = db.prepare(
+      'SELECT COUNT(*) as count FROM sync_queue WHERE status = ?'
+    ).get('PENDING').count;
+
     return {
-      status: 'connected',
-      pending: 0,
-      lastSync: Date.now()
+      status: syncState.wsConnected ? 'connected' : 'disconnected',
+      pending,
+      lastSync: syncState.lastSync
     };
   });
 
@@ -52,6 +57,8 @@ export function registerIpcHandlers(mainWindow, db) {
         storeName: data.storeName,
         deviceId
       });
+
+      eventBus.emit('agent:authenticated', { sellerId: data.sellerId });
 
       return {
         success: true,
