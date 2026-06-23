@@ -1,11 +1,11 @@
 import { createServer } from 'http';
+import { eventBus } from '../../shared/event-bus.js';
 import { logger } from '../../shared/logger.js';
 
 const WEBHOOK_PORT = 3847;
 
 export class SquareWebhookServer {
-  constructor(onInventoryChange) {
-    this.onInventoryChange = onInventoryChange;
+  constructor() {
     this.server = null;
   }
 
@@ -33,16 +33,14 @@ export class SquareWebhookServer {
     });
 
     this.server.listen(WEBHOOK_PORT, () => {
-      logger.info('Square webhook server escuchando', { port: WEBHOOK_PORT });
+      logger.info('Square webhook server listening', { port: WEBHOOK_PORT });
     });
   }
 
   handleEvent(event) {
     if (event.type === 'inventory.count.updated') {
-      logger.info('Cambio de inventario en Square', { data: event.data });
-      if (this.onInventoryChange) {
-        this.onInventoryChange(event.data);
-      }
+      logger.info('Square inventory change received', { data: event.data });
+      eventBus.emit('square:inventory:changed', event.data.counts || []);
     }
   }
 

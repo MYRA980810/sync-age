@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS local_inventory (
   visibility TEXT DEFAULT 'ACTIVE',
   aspel_raw TEXT,
   livecomerce_id TEXT,
+  pos_external_id TEXT,
   last_synced_at INTEGER,
   last_aspel_at INTEGER,
   last_online_at INTEGER

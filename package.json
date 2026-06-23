@@ -10,10 +10,11 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win --x64",
-    "build:installer": "electron-builder --win nsis"
+    "build:installer": "electron-builder --win nsis",
+    "test": "node --loader ./tests/electron-mock-loader.js --test tests/*.test.js"
   },
   "dependencies": {
-    "better-sqlite3": "^9.0.0",
+    "better-sqlite3": "^12.11.1",
     "chokidar": "^5.0.0",
     "electron-updater": "^6.0.0",
     "iconv-lite": "^0.6.3",

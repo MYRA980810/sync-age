@@ -6,6 +6,8 @@ import { QueueManager } from '../queue/queue-manager.js';
 import { IdentityManager } from './identity/identity-manager.js';
 import { SaleHandler } from './sale-handler.js';
 import { QueueProcessor } from './queue-processor.js';
+import { SquareClient } from './square/square-client.js';
+import { SquareWebhookServer } from './square/square-webhook.js';
 import { logger } from '../shared/logger.js';
 import { SYNC_INTERVAL } from '../shared/constants.js';
 import schedule from 'node-schedule';
@@ -18,6 +20,8 @@ export class SyncManager {
     this.identityManager = null;
     this.saleHandler = null;
     this.queueProcessor = null;
+    this.squareClient = null;
+    this.webhookServer = null;
   }
 
   async initialize(config) {
@@ -30,7 +34,7 @@ export class SyncManager {
 
     this.identityManager = new IdentityManager(
       this.queueManager.db,
-      config.aspel
+      config.aspel || config.square
     );
 
     this.saleHandler = new SaleHandler(
@@ -76,6 +80,67 @@ export class SyncManager {
       eventBus.emit('sync:periodic');
     });
 
+    if (config.square?.accessToken && config.square?.locationId) {
+      this.squareClient = new SquareClient(
+        config.square.accessToken,
+        config.square.locationId
+      );
+
+      this.webhookServer = new SquareWebhookServer();
+      this.webhookServer.start();
+
+      eventBus.on('square:inventory:changed', (counts) => {
+        for (const count of counts) {
+          const row = this.queueManager.db.prepare(
+            'SELECT sku FROM local_inventory WHERE pos_external_id = ?'
+          ).get(count.catalog_object_id);
+
+          if (!row) {
+            logger.warn('No SKU mapping for Square catalog object', {
+              catalogObjectId: count.catalog_object_id
+            });
+            continue;
+          }
+
+          this.queueManager.enqueue({
+            direction: 'TO_SERVER',
+            entity_type: 'STOCK',
+            entity_id: row.sku,
+            payload: JSON.stringify({
+              sku: row.sku,
+              stock: parseInt(count.quantity, 10),
+              source: 'square',
+              catalogObjectId: count.catalog_object_id,
+              timestamp: Date.now()
+            })
+          });
+        }
+      });
+
+      eventBus.on('server:online:sale', (sale) => {
+        const sku = this.identityManager.getSkuByUuid(sale.uuid || sale.sku) || sale.sku;
+        const row = this.queueManager.db.prepare(
+          'SELECT pos_external_id FROM local_inventory WHERE sku = ?'
+        ).get(sku);
+
+        if (row?.pos_external_id) {
+          this.squareClient.adjustInventory(
+            row.pos_external_id,
+            sale.qty,
+            `LiveComerce sale ${sale.orderId}`
+          ).catch((err) => {
+            logger.error('Failed to adjust Square inventory', {
+              sku,
+              catalogObjectId: row.pos_external_id,
+              err
+            });
+          });
+        }
+      });
+
+      logger.info('Square POS integration initialized');
+    }
+
     this.wsClient.connect();
 
     if (config.aspel?.exportPath) {
@@ -88,12 +153,13 @@ export class SyncManager {
       eventBus.emit('sync:periodic');
     });
 
-    logger.info('SyncManager inicializado correctamente');
+    logger.info('SyncManager initialized');
   }
 
   async shutdown() {
     if (this.watcher) await this.watcher.close();
+    if (this.webhookServer) this.webhookServer.stop();
     this.queueManager.stopProcessingLoop();
-    logger.info('SyncManager detenido');
+    logger.info('SyncManager stopped');
   }
 }
